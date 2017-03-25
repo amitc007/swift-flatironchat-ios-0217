@@ -11,7 +11,7 @@ import Firebase
 
 class ChannelViewController: UITableViewController {
     
-    
+    var ref: FIRDatabaseReference! = FIRDatabase.database().reference()
     
     var channels = [Channel]()
     var user: String = ""
@@ -25,7 +25,19 @@ class ChannelViewController: UITableViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-       
+        channels = []
+        ref.child("channels").observe(.value, with: { (snapshot) in
+            for item in snapshot.children {
+                //let channelItem = Channel(snapshot: item as! [String : [String : Any]])
+                
+                let channelItem = Channel(snapshot: item as! FIRDataSnapshot)
+                self.channels.append(channelItem)
+                print("ChannelViewController:item: \(item)")
+                print("ChannelViewController:channels:\(self.channels)")
+            }
+            self.tableView.reloadData()
+        })
+        
     }
     
     
@@ -58,7 +70,9 @@ class ChannelViewController: UITableViewController {
         let create = UIAlertAction(title: "Create", style: .default) { (action) in
             if let channel = alertController.textFields?[0].text {
                
+                self.ref.child("channels").child(channel).setValue(true) 
             }
+            self.tableView.reloadData()
         }
         
         let cancel = UIAlertAction(title: "Cancel", style: .cancel) { (action) in
@@ -87,8 +101,9 @@ extension ChannelViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "channelCell", for: indexPath)
         
         cell.textLabel?.text = channels[indexPath.row].name
-        cell.detailTextLabel?.text = channels[indexPath.row].lastMsg
+        cell.detailTextLabel?.text = channels[indexPath.row].lstMsg
         
+        print("In ChannelViewController:cellForRowAt")
         
         return cell
     }

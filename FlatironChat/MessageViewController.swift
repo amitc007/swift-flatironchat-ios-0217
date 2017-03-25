@@ -17,7 +17,9 @@ class MessageViewController: JSQMessagesViewController  {
     var messages = [JSQMessage]()
     var channelId = ""
     
+    //static var lstMsgIndex = -1
     
+    var ref: FIRDatabaseReference! = FIRDatabase.database().reference()
     
 
     override func viewDidLoad() {
@@ -25,14 +27,30 @@ class MessageViewController: JSQMessagesViewController  {
         setUpView()
         
         getMessages()
-        
-        
+        print("In MessageViewController:viewDidLoad:messages\(messages)")
     }
     
     
     
     
     func getMessages() {
+        //messages = []
+        ref.child("messages").child(channelId).observe(.value, with: { (snapshot) in
+            for msg in snapshot.children {
+                //let name = UserDefaults.standard.value(forKey: "screenName")
+                let msg_s = msg as? FIRDataSnapshot
+                if let msgDict = msg_s?.value as? [String:Any] {
+                    print("msgDict:\(msgDict)")
+                    if let jsq = JSQMessage(senderId: msgDict["from"] as? String, displayName: msgDict["from"] as? String, text: msgDict["content"] as? String) {
+                        self.messages.append(jsq)
+                        print("In MessageViewController:getMessages():jsq:\(jsq)")
+                    }
+                    print("In MessageViewController:getMessages():\(msg)")
+                }
+            }
+            self.finishReceivingMessage()    //imp
+        })
+        
         
     }
     
@@ -41,11 +59,15 @@ class MessageViewController: JSQMessagesViewController  {
     
 
     override func didPressSend(_ button: UIButton!, withMessageText text: String!, senderId: String!, senderDisplayName: String!, date: Date!) {
-        
-        
-        self.finishSendingMessage(animated: true)
+        let name = UserDefaults.standard.value(forKey: "screenName")
+        print("didPressSend:name:\(name)")
+        if let jsqMsg = JSQMessage(senderId: name as! String!, senderDisplayName: name as! String!, date: date, text: text) {
+            //messages.append(jsqMsg)
+            ref.child("messages").child(channelId).childByAutoId().setValue(["from":name, "content":text])
+        }
+        //self.finishSendingMessage(animated: true)
+        self.finishSendingMessage()
     }
-    
     
 
 }
@@ -54,6 +76,11 @@ class MessageViewController: JSQMessagesViewController  {
 
 extension MessageViewController {
     override func collectionView(_ collectionView: JSQMessagesCollectionView!, messageDataForItemAt indexPath: IndexPath!) -> JSQMessageData! {
+        
+        //if indexPath.row <= MessageViewController.lstMsgIndex { return nil }   //to avoid duplicate msgs
+        print("MessageViewController:messageDataForItemAt:indexPath:\(indexPath.row) msg:\(messages[indexPath.item])")
+        //MessageViewController.lstMsgIndex = indexPath.row
+        
         return messages[indexPath.item]
     }
     
